@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Witch Capitalist 7.3 - Identidade</title>
+    <title>Witch Capitalist 7.4 - Mercador Ágil</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -79,7 +79,7 @@
             Zap, Coins, Ghost, Sparkles, User, Briefcase, LogOut, 
             ArrowUpCircle, Star, Crown, Flame, Gem, BookOpen, 
             Settings, Scroll, Palette, Anchor, ShoppingBag, Clock, Shield, Save, 
-            Trophy, Hexagon, Lock, X, Medal, Globe, Moon, Skull, Eye, Map, CheckCircle
+            Trophy, Hexagon, Lock, X, Medal, Globe, Moon, Skull, Eye, Map, CheckCircle, Layers
         } from 'https://esm.sh/lucide-react@0.294.0';
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -375,6 +375,7 @@
             const [activeTab, setActiveTab] = useState('tycoon'); 
             const [activeRealm, setActiveRealm] = useState('terra'); 
             const [unlockedShadow, setUnlockedShadow] = useState(false);
+            const [buyMult, setBuyMult] = useState(1); // 1, 10, 100, 'MAX'
 
             const [businesses, setBusinesses] = useState({}); 
             const [shadowBusinesses, setShadowBusinesses] = useState({}); 
@@ -385,7 +386,7 @@
             const [slotState, setSlotState] = useState({ spinning: false, reels: ['❓','❓','❓'], msg: '' });
             const [isSaving, setIsSaving] = useState(false);
             const [showRanking, setShowRanking] = useState(false);
-            const [showProfile, setShowProfile] = useState(false); // NEW STATE
+            const [showProfile, setShowProfile] = useState(false);
 
             // Refs
             const moneyRef = useRef(0);
@@ -615,6 +616,38 @@
                 }
             };
 
+            // HELPER: Bulk Cost Calculation (Soma Geométrica)
+            const getBulkBuyInfo = (baseCost, currentQty, exponent, multiplier, currentMoney) => {
+                if (multiplier === 'MAX') {
+                    // Logaritmo para encontrar max N
+                    // CustoPóximo = Base * r^k
+                    // N = floor( log( M * (r-1) / (Base * r^k) + 1 ) / log(r) )
+                    const priceNext = baseCost * Math.pow(exponent, currentQty);
+                    if (priceNext > currentMoney) return { qty: 0, cost: 0 };
+                    
+                    const maxN = Math.floor( Math.log( (currentMoney * (exponent - 1)) / priceNext + 1 ) / Math.log(exponent) );
+                    const actualN = Math.max(1, maxN); // Pelo menos 1 se tiver dinheiro pra 1, mas a lógica acima já filtrou 0
+                    
+                    // Recalcula custo exato para N
+                    const totalCost = priceNext * ( (Math.pow(exponent, actualN) - 1) / (exponent - 1) );
+                    
+                    if (totalCost > currentMoney) return { qty: 0, cost: 0 }; // Edge case de precisão float
+                    return { qty: actualN, cost: Math.floor(totalCost) };
+                } else {
+                    const qty = multiplier;
+                    const priceNext = baseCost * Math.pow(exponent, currentQty);
+                    const totalCost = priceNext * ( (Math.pow(exponent, qty) - 1) / (exponent - 1) );
+                    return { qty: qty, cost: Math.floor(totalCost) };
+                }
+            };
+
+            const toggleMult = () => {
+                if (buyMult === 1) setBuyMult(10);
+                else if (buyMult === 10) setBuyMult(100);
+                else if (buyMult === 100) setBuyMult('MAX');
+                else setBuyMult(1);
+            };
+
             const buyBusiness = (bizId, realm) => {
                 const dataList = realm === 'terra' ? BUSINESSES_DATA : SHADOW_BUSINESSES_DATA;
                 const biz = dataList.find(b => b.id === bizId);
@@ -625,12 +658,13 @@
 
                 const state = ref.current[bizId] || { qty: 0, hasManager: false };
                 const exponent = realm === 'terra' ? 1.18 : 1.25; 
-                const cost = Math.floor(biz.cost * Math.pow(exponent, state.qty));
+                
+                const { qty, cost } = getBulkBuyInfo(biz.cost, state.qty, exponent, buyMult, currencyRef.current);
 
-                if (currencyRef.current >= cost) {
+                if (qty > 0 && currencyRef.current >= cost) {
                     currencyRef.current -= cost;
                     setCurrency(currencyRef.current);
-                    const newState = { ...state, qty: state.qty + 1 };
+                    const newState = { ...state, qty: state.qty + qty };
                     const newBizState = { ...ref.current, [bizId]: newState };
                     ref.current = newBizState;
                     setBizState(newBizState);
@@ -814,9 +848,12 @@
                 const currency = realm === 'terra' ? money : shadowMoney;
                 const state = ref[biz.id] || { qty: 0, hasManager: false, startTime: null };
                 const exponent = realm === 'terra' ? 1.18 : 1.25;
-                const currentCost = Math.floor(biz.cost * Math.pow(exponent, state.qty));
+                
+                // BULK BUY CALCULATION
+                const { qty: buyQty, cost: buyCost } = getBulkBuyInfo(biz.cost, state.qty, exponent, buyMult, currency);
+                
                 const managerCost = biz.cost * 10;
-                const canBuy = currency >= currentCost;
+                const canBuy = buyQty > 0;
                 
                 let mult = 1;
                 Object.keys(upgrades).forEach(uId => {
@@ -841,8 +878,8 @@
                                     / {biz.time/1000}s
                                 </p>
                                 <div className="flex gap-2">
-                                    <button onClick={() => buyBusiness(biz.id, realm)} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-b-4 active:border-b-0 active:translate-y-1 ${canBuy ? 'bg-purple-600 border-purple-800 hover:bg-purple-500 text-white' : 'bg-slate-700 border-slate-800 text-slate-500 opacity-70'}`}>
-                                        Comprar <span className="opacity-80 block font-mono text-[10px]">{realm === 'terra' ? formatMoney(currentCost) : formatShadowMoney(currentCost)}</span>
+                                    <button onClick={() => buyBusiness(biz.id, realm)} disabled={!canBuy} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-b-4 active:border-b-0 active:translate-y-1 ${canBuy ? 'bg-purple-600 border-purple-800 hover:bg-purple-500 text-white' : 'bg-slate-700 border-slate-800 text-slate-500 opacity-70 cursor-not-allowed'}`}>
+                                        Comprar {buyQty > 0 ? `+${buyQty}` : ''} <span className="opacity-80 block font-mono text-[10px]">{buyQty > 0 ? (realm === 'terra' ? formatMoney(buyCost) : formatShadowMoney(buyCost)) : '---'}</span>
                                     </button>
                                     {!state.hasManager && (
                                         <button onClick={() => hireManager(biz.id, realm)} disabled={currency < managerCost || state.qty === 0} className={`px-3 rounded-lg border text-xs font-bold transition-all ${state.qty > 0 && currency >= managerCost ? 'bg-yellow-600/20 border-yellow-600 text-yellow-500 hover:bg-yellow-600 hover:text-white' : 'border-slate-700 text-slate-700 bg-transparent'}`}>
@@ -921,6 +958,16 @@
                         {/* AREA DE NEGÓCIOS (MUDA COM O REINO) */}
                         {activeTab === 'tycoon' && (
                             <div className="space-y-4">
+                                {/* MULTIPLIER TOGGLE */}
+                                <div className="flex justify-end px-2">
+                                    <button 
+                                        onClick={toggleMult}
+                                        className={`px-4 py-1 rounded-full text-xs font-bold transition-all border ${buyMult === 'MAX' ? 'bg-red-900 border-red-500 text-white animate-pulse' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}
+                                    >
+                                        Comprar: <span className="text-white">{buyMult}x</span>
+                                    </button>
+                                </div>
+
                                 {activeRealm === 'terra' ? (
                                     <>
                                         {BUSINESSES_DATA.map(b => renderBusiness(b, 'terra'))}
