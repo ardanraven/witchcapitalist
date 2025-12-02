@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Witch Capitalist 7.3 - Identidade</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 3. Fontes e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 4. Estilos Customizados -->
+    <style>
+        :root {
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --primary-glow: rgba(168, 85, 247, 0.5);
+        }
+        
+        body { 
+            background-color: #020617; 
+            color: white; 
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes shine { 
+            0% { left: -100%; opacity: 0; } 
+            50% { opacity: 0.5; } 
+            100% { left: 100%; opacity: 0; } 
+        }
+        .shine-effect { position: relative; overflow: hidden; }
+        .shine-effect::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: skewX(-25deg); animation: shine 3s infinite;
+        }
+
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 10s linear infinite; }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Temas dos Reinos - Transições Suaves */
+        .theme-terra { background-color: #020617; } 
+        .theme-sombras { background-image: radial-gradient(circle at center, #1e1b4b, #020617); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { 
+            Zap, Coins, Ghost, Sparkles, User, Briefcase, LogOut, 
+            ArrowUpCircle, Star, Crown, Flame, Gem, BookOpen, 
+            Settings, Scroll, Palette, Anchor, ShoppingBag, Clock, Shield, Save, 
+            Trophy, Hexagon, Lock, X, Medal, Globe, Moon, Skull, Eye, Map, CheckCircle
+        } from 'https://esm.sh/lucide-react@0.294.0';
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2yX9J1l45zXL2vCc2B3SVT5HjV7UIanI",
+            authDomain: "jogo-56025.firebaseapp.com",
+            projectId: "jogo-56025",
+            storageBucket: "jogo-56025.firebasestorage.app",
+            messagingSenderId: "590564438008",
+            appId: "1:590564438008:web:ce49a047ed95447169300d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- DADOS (TERRA) ---
+        const BUSINESSES_DATA = [
+            { id: 'b1', name: 'Caldeirão de Cobre', cost: 50, rev: 5, time: 1000, icon: <Sparkles size={20} className="text-orange-400"/> },
+            { id: 'b2', name: 'Horta de Ervas', cost: 400, rev: 45, time: 2000, icon: <Ghost size={20} className="text-green-400"/> },
+            { id: 'b3', name: 'Venda de Poções', cost: 1500, rev: 180, time: 4000, icon: <Flame size={20} className="text-red-400"/> },
+            { id: 'b4', name: 'Entregas de Vassoura', cost: 5000, rev: 500, time: 8000, icon: <Zap size={20} className="text-yellow-400"/> },
+            { id: 'b5', name: 'Mina de Cristais', cost: 20000, rev: 1800, time: 12000, icon: <Gem size={20} className="text-cyan-400"/> },
+            { id: 'b6', name: 'Biblioteca Arcana', cost: 80000, rev: 6500, time: 18000, icon: <BookOpen size={20} className="text-blue-500"/> },
+            { id: 'b7', name: 'Altar da Lua', cost: 250000, rev: 18000, time: 24000, icon: <Star size={20} className="text-purple-300"/> },
+            { id: 'b8', name: 'Portal do Vazio', cost: 1000000, rev: 60000, time: 35000, icon: <User size={20} className="text-indigo-500"/> },
+            { id: 'b9', name: 'Fábrica de Golems', cost: 5000000, rev: 250000, time: 50000, icon: <Crown size={20} className="text-stone-400"/> },
+            { id: 'b10', name: 'Banco das Almas', cost: 25000000, rev: 1000000, time: 90000, icon: <Scroll size={20} className="text-emerald-500"/> },
+            { id: 'b11', name: 'Torre do Infinito', cost: 100000000, rev: 5000000, time: 150000, icon: <ArrowUpCircle size={20} className="text-pink-500"/> },
+            { id: 'b12', name: 'Nexus do Universo', cost: 1000000000, rev: 35000000, time: 300000, icon: <Palette size={20} className="text-rose-500"/> },
+            { id: 'b13', name: 'Tecelagem do Destino', cost: 50000000000, rev: 200000000, time: 600000, icon: <Anchor size={20} className="text-teal-400"/> },
+            { id: 'b14', name: 'Forja de Estrelas', cost: 1000000000000, rev: 800000000, time: 900000, icon: <Hexagon size={20} className="text-amber-400"/> },
+            { id: 'b15', name: 'Criador de Realidades', cost: 100000000000000, rev: 40000000000, time: 1200000, icon: <Shield size={20} className="text-fuchsia-400"/> },
+        ];
+
+        // --- DADOS (SOMBRAS) ---
+        const SHADOW_BUSINESSES_DATA = [
+            { id: 'sb1', name: 'Espelho Negro', cost: 100, rev: 15, time: 3000, icon: <Moon size={20} className="text-slate-400"/> },
+            { id: 'sb2', name: 'Fogueira Fátua', cost: 1000, rev: 120, time: 6000, icon: <Flame size={20} className="text-blue-400"/> },
+            { id: 'sb3', name: 'Poço de Piche', cost: 12000, rev: 1100, time: 12000, icon: <User size={20} className="text-gray-500"/> },
+            { id: 'sb4', name: 'Jardim de Espinhos', cost: 150000, rev: 10000, time: 24000, icon: <Ghost size={20} className="text-red-900"/> },
+            { id: 'sb5', name: 'Torre do Pesadelo', cost: 2000000, rev: 150000, time: 48000, icon: <Lock size={20} className="text-purple-800"/> },
+            { id: 'sb6', name: 'Vórtice do Caos', cost: 50000000, rev: 2000000, time: 96000, icon: <Trophy size={20} className="text-yellow-600"/> },
+            { id: 'sb7', name: 'Altar de Sangue', cost: 800000000, rev: 25000000, time: 120000, icon: <Skull size={20} className="text-red-600"/> },
+            { id: 'sb8', name: 'Olho do Abismo', cost: 10000000000, rev: 100000000, time: 200000, icon: <Eye size={20} className="text-teal-600"/> },
+        ];
+
+        // --- UPGRADES ---
+        const UPGRADES_DATA = [
+            { id: 'u1', name: 'Colher de Prata', cost: 2000, mult: 2, target: 'b1', type: 'money', desc: "Caldeirões 2x mais rápidos" },
+            { id: 'u2', name: 'Adubo Mágico', cost: 15000, mult: 2, target: 'b2', type: 'money', desc: "Hortas 2x mais produtivas" },
+            { id: 'u3', name: 'Garrafas de Cristal', cost: 50000, mult: 2, target: 'b3', type: 'money', desc: "Poções 2x mais lucro" },
+            { id: 'u4', name: 'Vassoura Turbo', cost: 200000, mult: 2, target: 'b4', type: 'money', desc: "Entregas 2x mais rápidas" },
+            { id: 'u5', name: 'Pico de Diamante', cost: 1000000, mult: 3, target: 'b5', type: 'money', desc: "Minas 3x mais lucro" },
+            { id: 'u6', name: 'Indexador Auto', cost: 5000000, mult: 3, target: 'b6', type: 'money', desc: "Biblioteca 3x mais eficiente" },
+            { id: 'u7', name: 'Pedra Lunar', cost: 20000000, mult: 3, target: 'b7', type: 'money', desc: "Altar 3x mais poder" },
+            { id: 'u8', name: 'Estabilizador', cost: 100000000, mult: 3, target: 'b8', type: 'money', desc: "Portais 3x mais estáveis" },
+            { id: 'u9', name: 'Óleo de Golem', cost: 500000000, mult: 3, target: 'b9', type: 'money', desc: "Fábricas 3x mais rápidas" },
+            { id: 'u10', name: 'Contratos Eternos', cost: 2000000000, mult: 5, target: 'b10', type: 'money', desc: "Banco gera 5x mais" },
+            { id: 'u11', name: 'Elevador Gravitacional', cost: 10000000000, mult: 5, target: 'b11', type: 'money', desc: "Torre 5x mais alta" },
+            { id: 'u12', name: 'Matéria Escura', cost: 50000000000, mult: 5, target: 'b12', type: 'money', desc: "Nexus 5x mais denso" },
+            { id: 'u13', name: 'Fios de Ouro', cost: 1000000000000, mult: 5, target: 'b13', type: 'money', desc: "Tecelagem 5x mais precisa" },
+            { id: 'g1', name: 'Pacto Sombrio', cost: 50000000, mult: 2, target: 'all', type: 'money', desc: "TUDO gera 2x mais lucro" },
+            { id: 'a1', name: 'Cálice da Abundância', cost: 5, mult: 3, target: 'all', type: 'mana', desc: "[ARTEFATO] Lucro Global x3" },
+            { id: 'a2', name: 'Relógio do Tempo', cost: 10, mult: 2, target: 'all', type: 'mana', desc: "[ARTEFATO] Produção 2x mais rápida (simulado)" },
+            { id: 'a3', name: 'Coroa do Rei Bruxo', cost: 20, mult: 10, target: 'all', type: 'mana', desc: "[ARTEFATO] O Poder Supremo (x10)" },
+        ];
+
+        const SHADOW_UPGRADES_DATA = [
+            { id: 'su1', name: 'Reflexo Distorcido', cost: 500, mult: 2, target: 'sb1', type: 'shadow', desc: "Espelhos 2x mais rápidos" },
+            { id: 'su2', name: 'Lenha Maldita', cost: 5000, mult: 2, target: 'sb2', type: 'shadow', desc: "Fogueiras 2x mais quentes" },
+            { id: 'su3', name: 'Baldes Furados', cost: 50000, mult: 2, target: 'sb3', type: 'shadow', desc: "Poços 2x mais profundos" },
+            { id: 'su4', name: 'Fertilizante de Ossos', cost: 500000, mult: 2, target: 'sb4', type: 'shadow', desc: "Espinhos 2x mais afiados" },
+            { id: 'su5', name: 'Pedras do Medo', cost: 8000000, mult: 3, target: 'sb5', type: 'shadow', desc: "Torres 3x mais altas" },
+            { id: 'su6', name: 'Entropia Concentrada', cost: 100000000, mult: 3, target: 'sb6', type: 'shadow', desc: "Vórtices 3x mais instáveis" },
+            { id: 'sg1', name: 'Sussurros do Vazio', cost: 10000000, mult: 2, target: 'all', type: 'shadow', desc: "Tudo nas Sombras x2" },
+            { id: 'sg2', name: 'Domínio das Trevas', cost: 1000000000, mult: 3, target: 'all', type: 'shadow', desc: "Tudo nas Sombras x3" }
+        ];
+
+        const ACHIEVEMENTS_DATA = [
+            { id: 'm1', name: 'Primeiros Passos', req: { type: 'money', val: 1000 }, reward: 1, desc: "Acumule $1k" },
+            { id: 'm2', name: 'Bolsa Pesada', req: { type: 'money', val: 100000 }, reward: 1, desc: "Acumule $100k" },
+            { id: 'm3', name: 'Milionário', req: { type: 'money', val: 1000000 }, reward: 2, desc: "Acumule $1M" },
+            { id: 'm4', name: 'Bilionário', req: { type: 'money', val: 1000000000 }, reward: 3, desc: "Acumule $1B" },
+            { id: 'm5', name: 'Trilionário', req: { type: 'money', val: 1000000000000 }, reward: 5, desc: "Acumule $1T" },
+            { id: 'm6', name: 'Quadrilionário', req: { type: 'money', val: 1e15 }, reward: 8, desc: "Acumule $1 Quadrilhão" },
+            { id: 'm7', name: 'Quintilionário', req: { type: 'money', val: 1e18 }, reward: 10, desc: "Acumule $1 Quintilhão" },
+            { id: 'm8', name: 'Sextilionário', req: { type: 'money', val: 1e21 }, reward: 12, desc: "Acumule $1 Sextilhão" },
+            { id: 'm9', name: 'Septilionário', req: { type: 'money', val: 1e24 }, reward: 15, desc: "Acumule $1 Septilhão" },
+            { id: 'b_cal_25', name: 'Mestre das Sopas', req: { type: 'biz', id: 'b1', val: 25 }, reward: 1, desc: "25 Caldeirões" },
+            { id: 'b_cal_100', name: 'Chef Mágico', req: { type: 'biz', id: 'b1', val: 100 }, reward: 2, desc: "100 Caldeirões" },
+            { id: 'b_hor_50', name: 'Jardineiro', req: { type: 'biz', id: 'b2', val: 50 }, reward: 1, desc: "50 Hortas" },
+            { id: 'b_min_50', name: 'Magnata das Pedras', req: { type: 'biz', id: 'b5', val: 50 }, reward: 4, desc: "50 Minas" },
+            { id: 's_50', name: 'Viciado em Sorte', req: { type: 'spins', val: 50 }, reward: 2, desc: "50 Giros" },
+            { id: 's_200', name: 'Roleta Russa', req: { type: 'spins', val: 200 }, reward: 5, desc: "200 Giros" },
+            { id: 'u_10', name: 'Erudito', req: { type: 'upgrades', val: 10 }, reward: 5, desc: "10 Upgrades" },
+            { id: 't_500', name: 'Cidade Mística', req: { type: 'total_biz', val: 500 }, reward: 5, desc: "500 Construções Totais" },
+        ];
+
+        const formatMoney = (amount) => {
+            if (amount >= 1e24) return `$${(amount / 1e24).toFixed(2)}Sp`;
+            if (amount >= 1e21) return `$${(amount / 1e21).toFixed(2)}Sx`;
+            if (amount >= 1e18) return `$${(amount / 1e18).toFixed(2)}Qi`;
+            if (amount >= 1e15) return `$${(amount / 1e15).toFixed(2)}Q`;
+            if (amount >= 1e12) return `$${(amount / 1e12).toFixed(2)}T`;
+            if (amount >= 1e9) return `$${(amount / 1e9).toFixed(2)}B`;
+            if (amount >= 1e6) return `$${(amount / 1e6).toFixed(2)}M`;
+            if (amount >= 1e3) return `$${(amount / 1e3).toFixed(1)}k`;
+            return `$${Math.floor(amount)}`;
+        };
+
+        const formatShadowMoney = (amount) => {
+            if (amount >= 1e9) return `🟣 ${(amount / 1e9).toFixed(2)}B`;
+            if (amount >= 1e6) return `🟣 ${(amount / 1e6).toFixed(2)}M`;
+            if (amount >= 1e3) return `🟣 ${(amount / 1e3).toFixed(1)}k`;
+            return `🟣 ${Math.floor(amount).toLocaleString()}`;
+        };
+
+        function AuthScreen() {
+            const [isRegister, setIsRegister] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                try {
+                    if (isRegister) await createUserWithEmailAndPassword(auth, email, password);
+                    else await signInWithEmailAndPassword(auth, email, password);
+                } catch (err) {
+                    setError(err.message.replace('Firebase:', '').replace('auth/', ''));
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-purple-900 to-slate-900">
+                    <div className="w-full max-w-md glass-panel p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                        <div className="text-center mb-10 relative z-10">
+                            <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200">Witch Capitalist</h1>
+                            <p className="text-purple-300 text-sm mt-2">Dualidade Mística</p>
+                        </div>
+                        <form onSubmit={handleAuth} className="space-y-4 relative z-10">
+                            <input className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-white placeholder-slate-400" placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
+                            <input className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-white placeholder-slate-400" placeholder="Senha" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+                            {error && <div className="text-red-400 text-xs text-center">{error}</div>}
+                            <button disabled={loading} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-4 rounded-xl font-bold text-white shadow-lg">
+                                {loading ? 'Carregando...' : (isRegister ? 'Criar Conta' : 'Entrar')}
+                            </button>
+                        </form>
+                        <button onClick={() => setIsRegister(!isRegister)} className="w-full text-center mt-6 text-xs text-slate-400">
+                            {isRegister ? 'Já tem conta? Entrar' : 'Criar nova conta'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const ProgressBar = ({ startTime, duration, isRunning, colorClass = "from-purple-500 to-pink-500" }) => {
+            const barRef = useRef(null);
+            useEffect(() => {
+                let animationFrameId;
+                const update = () => {
+                    if (!barRef.current) return;
+                    if (!isRunning || !startTime) { barRef.current.style.width = '0%'; return; }
+                    const progress = Math.min(100, ((Date.now() - startTime) / duration) * 100);
+                    barRef.current.style.width = `${progress}%`;
+                    if (progress < 100) animationFrameId = requestAnimationFrame(update);
+                };
+                update();
+                return () => cancelAnimationFrame(animationFrameId);
+            }, [startTime, duration, isRunning]);
+            return (
+                <div className="h-1.5 w-full bg-slate-900/50 rounded-full overflow-hidden mt-3">
+                    <div ref={barRef} className={`h-full bg-gradient-to-r ${colorClass}`} style={{ width: '0%' }}/>
+                </div>
+            );
+        };
+
+        const LeaderboardModal = ({ isOpen, onClose }) => {
+            const [leaders, setLeaders] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                if (isOpen) {
+                    setLoading(true);
+                    const fetchLeaders = async () => {
+                        try {
+                            const snap = await getDocs(collection(db, 'players'));
+                            const players = [];
+                            snap.forEach(doc => {
+                                const d = doc.data();
+                                players.push({ id: doc.id, money: d.money || 0, email: d.email || 'Bruxo Anônimo' });
+                            });
+                            players.sort((a, b) => b.money - a.money);
+                            setLeaders(players.slice(0, 10));
+                        } catch (e) { console.error("Erro ranking", e); } finally { setLoading(false); }
+                    };
+                    fetchLeaders();
+                }
+            }, [isOpen]);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+                    <div className="glass-panel w-full max-w-sm rounded-3xl p-6 relative animate-float">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={20}/></button>
+                        <div className="text-center mb-6">
+                            <Trophy size={40} className="text-yellow-400 mx-auto mb-2"/>
+                            <h2 className="text-2xl font-black text-white">Ordem dos Bruxos</h2>
+                            <p className="text-xs text-slate-400">Os 10 mais ricos do multiverso</p>
+                        </div>
+                        {loading ? <div className="text-center py-10 text-purple-400 animate-pulse">Consultando os astros...</div> : (
+                            <div className="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                                {leaders.map((p, i) => (
+                                    <div key={p.id} className="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-white/5">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i === 0 ? 'bg-yellow-500 text-black' : i === 1 ? 'bg-slate-300 text-black' : i === 2 ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-400'}`}>{i + 1}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-bold text-white truncate">{p.email.split('@')[0]}</div>
+                                            <div className="text-xs text-green-400 font-mono">{formatMoney(p.money)}</div>
+                                        </div>
+                                        {i === 0 && <Crown size={16} className="text-yellow-400"/>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- NEW PROFILE MODAL ---
+        const ProfileModal = ({ isOpen, onClose, user, stats, money, shadowMoney, mana, spins, achievements, upgrades }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+                    <div className="glass-panel w-full max-w-sm rounded-3xl p-6 relative animate-float">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={20}/></button>
+                        <div className="text-center mb-6">
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 mx-auto flex items-center justify-center font-bold text-4xl text-white shadow-xl mb-3">
+                                {user.email[0].toUpperCase()}
+                            </div>
+                            <h2 className="text-xl font-bold text-white truncate">{user.email}</h2>
+                            <p className="text-xs text-purple-300">Arquimago do Coven</p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <div className="bg-slate-800/50 p-3 rounded-xl flex justify-between items-center">
+                                <span className="text-xs text-slate-400">Patrimônio (Terra)</span>
+                                <span className="text-sm font-bold text-green-400 font-mono">{formatMoney(money)}</span>
+                            </div>
+                            <div className="bg-slate-800/50 p-3 rounded-xl flex justify-between items-center border border-purple-500/20">
+                                <span className="text-xs text-slate-400">Almas (Sombras)</span>
+                                <span className="text-sm font-bold text-purple-400 font-mono">{formatShadowMoney(shadowMoney)}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-800/50 p-3 rounded-xl text-center">
+                                    <Hexagon size={16} className="text-teal-400 mx-auto mb-1"/>
+                                    <div className="text-xs text-slate-400">Mana</div>
+                                    <div className="font-bold">{mana}</div>
+                                </div>
+                                <div className="bg-slate-800/50 p-3 rounded-xl text-center">
+                                    <Zap size={16} className="text-blue-400 mx-auto mb-1"/>
+                                    <div className="text-xs text-slate-400">Giros Totais</div>
+                                    <div className="font-bold">{stats.totalSpins || 0}</div>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 text-center text-[10px] text-slate-500 mt-2 justify-center">
+                                <span><CheckCircle size={10} className="inline mr-1"/>{Object.keys(achievements).length} Conquistas</span>
+                                <span><BookOpen size={10} className="inline mr-1"/>{Object.keys(upgrades).length} Upgrades</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- GAME ENGINE ---
+        function GameApp({ user }) {
+            const [money, setMoney] = useState(0);
+            const [mana, setMana] = useState(0); 
+            const [shadowMoney, setShadowMoney] = useState(0); 
+            const [spins, setSpins] = useState(20);
+            const [activeTab, setActiveTab] = useState('tycoon'); 
+            const [activeRealm, setActiveRealm] = useState('terra'); 
+            const [unlockedShadow, setUnlockedShadow] = useState(false);
+
+            const [businesses, setBusinesses] = useState({}); 
+            const [shadowBusinesses, setShadowBusinesses] = useState({}); 
+            const [upgrades, setUpgrades] = useState({});
+            const [achievements, setAchievements] = useState({}); 
+            const [shopUsage, setShopUsage] = useState({ lastDayWarp: 0, hourWarpCount: 0, lastHourWarpReset: 0 });
+            
+            const [slotState, setSlotState] = useState({ spinning: false, reels: ['❓','❓','❓'], msg: '' });
+            const [isSaving, setIsSaving] = useState(false);
+            const [showRanking, setShowRanking] = useState(false);
+            const [showProfile, setShowProfile] = useState(false); // NEW STATE
+
+            // Refs
+            const moneyRef = useRef(0);
+            const manaRef = useRef(0);
+            const shadowMoneyRef = useRef(0);
+            const spinsRef = useRef(20);
+            const businessesRef = useRef({});
+            const shadowBusinessesRef = useRef({});
+            const upgradesRef = useRef({});
+            const achievementsRef = useRef({});
+            const shopUsageRef = useRef({ lastDayWarp: 0, hourWarpCount: 0, lastHourWarpReset: 0 });
+            const unlockedShadowRef = useRef(false);
+            const statsRef = useRef({ totalSpins: 0 });
+            const pendingSaveRef = useRef(false);
+            const mpsRef = useRef(0); 
+            const shadowMpsRef = useRef(0); 
+            
+            const dbRef = doc(db, 'players', user.uid);
+
+            useEffect(() => {
+                const unsub = onSnapshot(dbRef, (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        moneyRef.current = data.money || 0; setMoney(data.money || 0);
+                        shadowMoneyRef.current = data.shadowMoney || 0; setShadowMoney(data.shadowMoney || 0);
+                        manaRef.current = data.mana || 0; setMana(data.mana || 0);
+                        spinsRef.current = data.spins || 20; setSpins(data.spins || 20);
+                        
+                        businessesRef.current = data.businesses || {}; setBusinesses(data.businesses || {});
+                        shadowBusinessesRef.current = data.shadowBusinesses || {}; setShadowBusinesses(data.shadowBusinesses || {});
+                        
+                        upgradesRef.current = data.upgrades || {}; setUpgrades(data.upgrades || {});
+                        achievementsRef.current = data.achievements || {}; setAchievements(data.achievements || {});
+                        shopUsageRef.current = data.shopUsage || { lastDayWarp: 0, hourWarpCount: 0, lastHourWarpReset: 0 }; setShopUsage(shopUsageRef.current);
+                        statsRef.current = data.stats || { totalSpins: 0 };
+                        
+                        unlockedShadowRef.current = data.unlockedShadow || false;
+                        setUnlockedShadow(data.unlockedShadow || false);
+                        
+                        if (!data.email) updateDoc(dbRef, { email: user.email });
+                    } else {
+                        setDoc(dbRef, { 
+                            email: user.email, 
+                            money: 0, shadowMoney: 0, mana: 0, spins: 20, 
+                            businesses: {}, shadowBusinesses: {}, 
+                            upgrades: {}, achievements: {}, stats: { totalSpins: 0 }, unlockedShadow: false 
+                        });
+                    }
+                });
+
+                const timer = setInterval(() => {
+                    spinsRef.current += 1;
+                    setSpins(spinsRef.current);
+                    const now = Date.now();
+                    if (now - shopUsageRef.current.lastHourWarpReset > 86400000) {
+                        shopUsageRef.current.hourWarpCount = 0;
+                        shopUsageRef.current.lastHourWarpReset = now;
+                        setShopUsage({...shopUsageRef.current});
+                    }
+                    pendingSaveRef.current = true;
+                }, 60000);
+
+                const saveInterval = setInterval(() => { if (pendingSaveRef.current) saveData(); }, 60000);
+                const handleBeforeUnload = () => { if (pendingSaveRef.current) saveData(); };
+                window.addEventListener("beforeunload", handleBeforeUnload);
+
+                return () => { unsub(); clearInterval(timer); clearInterval(saveInterval); window.removeEventListener("beforeunload", handleBeforeUnload); };
+            }, [user.uid]);
+
+            const saveData = async () => {
+                setIsSaving(true);
+                try {
+                    await updateDoc(dbRef, {
+                        money: moneyRef.current,
+                        shadowMoney: shadowMoneyRef.current,
+                        mana: manaRef.current,
+                        spins: spinsRef.current,
+                        businesses: businessesRef.current,
+                        shadowBusinesses: shadowBusinessesRef.current,
+                        upgrades: upgradesRef.current,
+                        achievements: achievementsRef.current,
+                        shopUsage: shopUsageRef.current,
+                        stats: statsRef.current,
+                        unlockedShadow: unlockedShadowRef.current, 
+                        email: user.email
+                    });
+                    pendingSaveRef.current = false;
+                } catch (e) { console.error("Erro save", e); } finally { setTimeout(() => setIsSaving(false), 500); }
+            };
+
+            // GAME LOOP (DUPLO REINO)
+            useEffect(() => {
+                const tickRate = 100;
+                const loop = setInterval(() => {
+                    const now = Date.now();
+                    let earned = 0;
+                    let shadowEarned = 0;
+                    let hasChanges = false;
+                    let currentMPS = 0;
+                    let currentShadowMPS = 0;
+                    
+                    let newBizState = { ...businessesRef.current };
+                    let newShadowBizState = { ...shadowBusinessesRef.current };
+
+                    let globalMult = 1;
+                    let globalShadowMult = 1;
+
+                    // Calcula Multiplicadores Globais
+                    Object.keys(upgradesRef.current).forEach(uId => {
+                         const uData = UPGRADES_DATA.find(u => u.id === uId) || SHADOW_UPGRADES_DATA.find(u => u.id === uId);
+                         if (uData && uData.target === 'all') {
+                             if(uData.type === 'shadow') globalShadowMult *= uData.mult;
+                             else globalMult *= uData.mult;
+                         }
+                    });
+
+                    // 1. REINO DA TERRA
+                    BUSINESSES_DATA.forEach(biz => {
+                        const state = newBizState[biz.id];
+                        if (!state || state.qty === 0) return;
+
+                        let mult = globalMult;
+                        Object.keys(upgradesRef.current).forEach(uId => {
+                            const uData = UPGRADES_DATA.find(u => u.id === uId);
+                            if (uData && uData.target === biz.id) mult *= uData.mult;
+                        });
+
+                        const revPerSec = (biz.rev * state.qty * mult) / (biz.time/1000);
+                        currentMPS += revPerSec;
+
+                        if (state.startTime) {
+                            if (now - state.startTime >= biz.time) {
+                                earned += (biz.rev * state.qty * mult);
+                                newBizState[biz.id] = { ...state, startTime: state.hasManager ? now : null };
+                                hasChanges = true;
+                            }
+                        } else if (state.hasManager) {
+                            newBizState[biz.id] = { ...state, startTime: now };
+                            hasChanges = true;
+                        }
+                    });
+
+                    // 2. REINO DAS SOMBRAS
+                    SHADOW_BUSINESSES_DATA.forEach(biz => {
+                        const state = newShadowBizState[biz.id];
+                        if (!state || state.qty === 0) return;
+                        
+                        let mult = globalShadowMult;
+                        Object.keys(upgradesRef.current).forEach(uId => {
+                            const uData = SHADOW_UPGRADES_DATA.find(u => u.id === uId);
+                            if (uData && uData.target === biz.id) mult *= uData.mult;
+                        });
+
+                        const revPerSec = (biz.rev * state.qty * mult) / (biz.time/1000);
+                        currentShadowMPS += revPerSec;
+
+                        if (state.startTime) {
+                            if (now - state.startTime >= biz.time) {
+                                shadowEarned += (biz.rev * state.qty * mult);
+                                newShadowBizState[biz.id] = { ...state, startTime: state.hasManager ? now : null };
+                                hasChanges = true;
+                            }
+                        } else if (state.hasManager) {
+                            newShadowBizState[biz.id] = { ...state, startTime: now };
+                            hasChanges = true;
+                        }
+                    });
+                    
+                    mpsRef.current = currentMPS;
+                    shadowMpsRef.current = currentShadowMPS;
+
+                    if (earned > 0) {
+                        moneyRef.current += earned;
+                        setMoney(moneyRef.current);
+                        pendingSaveRef.current = true;
+                    }
+                    if (shadowEarned > 0) {
+                        shadowMoneyRef.current += shadowEarned;
+                        setShadowMoney(shadowMoneyRef.current);
+                        pendingSaveRef.current = true;
+                    }
+                    if (hasChanges) {
+                        businessesRef.current = newBizState;
+                        setBusinesses(newBizState);
+                        shadowBusinessesRef.current = newShadowBizState;
+                        setShadowBusinesses(newShadowBizState);
+                        pendingSaveRef.current = true;
+                    }
+
+                    checkAchievements();
+
+                }, tickRate);
+                return () => clearInterval(loop);
+            }, []);
+
+            const checkAchievements = () => {
+                let earnedMana = 0;
+                let newAchievements = { ...achievementsRef.current };
+                let changed = false;
+                let totalBiz = 0;
+                Object.values(businessesRef.current).forEach(b => totalBiz += (b.qty || 0));
+
+                ACHIEVEMENTS_DATA.forEach(ac => {
+                    if (newAchievements[ac.id]) return; 
+                    let completed = false;
+                    if (ac.req.type === 'money' && moneyRef.current >= ac.req.val) completed = true;
+                    if (ac.req.type === 'spins' && statsRef.current.totalSpins >= ac.req.val) completed = true;
+                    if (ac.req.type === 'upgrades' && Object.keys(upgradesRef.current).length >= ac.req.val) completed = true;
+                    if (ac.req.type === 'total_biz' && totalBiz >= ac.req.val) completed = true;
+                    if (ac.req.type === 'biz') {
+                        const biz = businessesRef.current[ac.req.id];
+                        if (biz && biz.qty >= ac.req.val) completed = true;
+                    }
+                    if (completed) {
+                        newAchievements[ac.id] = true;
+                        earnedMana += ac.reward;
+                        changed = true;
+                    }
+                });
+
+                if (changed) {
+                    achievementsRef.current = newAchievements;
+                    setAchievements(newAchievements);
+                    manaRef.current += earnedMana;
+                    setMana(manaRef.current);
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            const buyBusiness = (bizId, realm) => {
+                const dataList = realm === 'terra' ? BUSINESSES_DATA : SHADOW_BUSINESSES_DATA;
+                const biz = dataList.find(b => b.id === bizId);
+                const ref = realm === 'terra' ? businessesRef : shadowBusinessesRef;
+                const currencyRef = realm === 'terra' ? moneyRef : shadowMoneyRef;
+                const setCurrency = realm === 'terra' ? setMoney : setShadowMoney;
+                const setBizState = realm === 'terra' ? setBusinesses : setShadowBusinesses;
+
+                const state = ref.current[bizId] || { qty: 0, hasManager: false };
+                const exponent = realm === 'terra' ? 1.18 : 1.25; 
+                const cost = Math.floor(biz.cost * Math.pow(exponent, state.qty));
+
+                if (currencyRef.current >= cost) {
+                    currencyRef.current -= cost;
+                    setCurrency(currencyRef.current);
+                    const newState = { ...state, qty: state.qty + 1 };
+                    const newBizState = { ...ref.current, [bizId]: newState };
+                    ref.current = newBizState;
+                    setBizState(newBizState);
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            const hireManager = (bizId, realm) => {
+                const dataList = realm === 'terra' ? BUSINESSES_DATA : SHADOW_BUSINESSES_DATA;
+                const biz = dataList.find(b => b.id === bizId);
+                const ref = realm === 'terra' ? businessesRef : shadowBusinessesRef;
+                const currencyRef = realm === 'terra' ? moneyRef : shadowMoneyRef;
+                const setCurrency = realm === 'terra' ? setMoney : setShadowMoney;
+                const setBizState = realm === 'terra' ? setBusinesses : setShadowBusinesses;
+
+                const mgrCost = biz.cost * 10;
+                if (currencyRef.current >= mgrCost) {
+                     currencyRef.current -= mgrCost;
+                     setCurrency(currencyRef.current);
+                     const currentState = ref.current[bizId];
+                     const newState = { ...currentState, hasManager: true, startTime: Date.now() };
+                     ref.current = { ...ref.current, [bizId]: newState };
+                     setBizState(ref.current);
+                     pendingSaveRef.current = true;
+                }
+            };
+
+            const manualClick = (bizId, realm) => {
+                const ref = realm === 'terra' ? businessesRef : shadowBusinessesRef;
+                const setBizState = realm === 'terra' ? setBusinesses : setShadowBusinesses;
+                
+                const state = ref.current[bizId];
+                if (state && state.qty > 0 && !state.startTime) {
+                    const now = Date.now();
+                    const newState = { ...state, startTime: now };
+                    ref.current = { ...ref.current, [bizId]: newState };
+                    setBizState(ref.current);
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            // FIX: Force immediate update and use Ref to prevent autosave overwriting
+            const unlockShadowRealm = () => {
+                if (moneyRef.current >= 1000000000000) { 
+                    moneyRef.current -= 1000000000000;
+                    setMoney(moneyRef.current);
+                    
+                    unlockedShadowRef.current = true;
+                    setUnlockedShadow(true);
+                    
+                    // Force Save Immediately
+                    updateDoc(dbRef, { unlockedShadow: true, money: moneyRef.current });
+                    setActiveRealm('sombras');
+                }
+            };
+
+            const buyUpgrade = (uId) => {
+                // Procura em ambas as listas
+                const upg = UPGRADES_DATA.find(u => u.id === uId) || SHADOW_UPGRADES_DATA.find(u => u.id === uId);
+                if(!upg) return;
+
+                const price = upg.cost;
+                // Decide a moeda baseada no tipo do upgrade
+                let currencyRef;
+                let setCurrency;
+
+                if(upg.type === 'mana') { currencyRef = manaRef; setCurrency = setMana; }
+                else if(upg.type === 'shadow') { currencyRef = shadowMoneyRef; setCurrency = setShadowMoney; }
+                else { currencyRef = moneyRef; setCurrency = setMoney; }
+
+                if (currencyRef.current >= price) {
+                    currencyRef.current -= price;
+                    setCurrency(currencyRef.current);
+                    upgradesRef.current = { ...upgradesRef.current, [uId]: true };
+                    setUpgrades(upgradesRef.current);
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            const buyEnergy = (amount, cost) => {
+                if (moneyRef.current >= cost) {
+                    moneyRef.current -= cost;
+                    setMoney(moneyRef.current);
+                    spinsRef.current += amount;
+                    setSpins(spinsRef.current);
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            const buyTimeWarp = (hours, cost) => {
+                const now = Date.now();
+                if (hours === 24) {
+                    if (now - shopUsageRef.current.lastDayWarp < 86400000) return;
+                    shopUsageRef.current.lastDayWarp = now;
+                } else if (hours === 1) {
+                    if (shopUsageRef.current.hourWarpCount >= 5) return;
+                    shopUsageRef.current.hourWarpCount += 1;
+                }
+                setShopUsage({...shopUsageRef.current});
+
+                if (moneyRef.current >= cost) {
+                    moneyRef.current -= cost;
+                    setMoney(moneyRef.current);
+
+                    // Aplica o Warp no REINO ATIVO
+                    if (activeRealm === 'terra') {
+                        const windfall = mpsRef.current * 3600 * hours;
+                        moneyRef.current += windfall;
+                        setMoney(moneyRef.current);
+                    } else {
+                        const windfall = shadowMpsRef.current * 3600 * hours;
+                        shadowMoneyRef.current += windfall;
+                        setShadowMoney(shadowMoneyRef.current);
+                    }
+                    
+                    pendingSaveRef.current = true;
+                }
+            };
+
+            const spinSlot = async () => {
+                if (spinsRef.current <= 0 || slotState.spinning) return;
+                setSlotState({ ...slotState, spinning: true, msg: '' });
+                spinsRef.current -= 1;
+                setSpins(spinsRef.current);
+                statsRef.current.totalSpins = (statsRef.current.totalSpins || 0) + 1;
+                pendingSaveRef.current = true;
+
+                const icons = activeRealm === 'terra' 
+                    ? ['🌕','🌑','💎','🍀','💀'] 
+                    : ['🟣','👁️','🕸️','🔮','☠️']; // Ícones Sombrios
+
+                let steps = 0;
+                const interval = setInterval(() => {
+                    setSlotState(prev => ({ ...prev, reels: [ icons[Math.floor(Math.random()*icons.length)], icons[Math.floor(Math.random()*icons.length)], icons[Math.floor(Math.random()*icons.length)] ] }));
+                    steps++;
+                    if(steps > 20) { clearInterval(interval); finishSpin(); }
+                }, 80);
+            };
+
+            const finishSpin = () => {
+                const r = Math.random();
+                let reward = 0; let msg = ''; let finalIcons = [];
+                
+                // Roleta Sombria usa MPS Sombrio, Roleta Normal usa MPS Normal
+                const isShadow = activeRealm === 'sombras';
+                const mps = isShadow ? shadowMpsRef.current : mpsRef.current;
+                const baseValue = Math.max(100, mps * 60); 
+
+                const icons = isShadow 
+                    ? { jackpot: '🔮', big: '👁️', nice: '🟣', small: '☠️' }
+                    : { jackpot: '💎', big: '🌕', nice: '🍀', small: '💀' };
+
+                if (r < 0.05) { reward = baseValue * 50; msg = 'JACKPOT!'; finalIcons=[icons.jackpot,icons.jackpot,icons.jackpot]; }
+                else if (r < 0.2) { reward = baseValue * 10; msg = 'Big Win!'; finalIcons=[icons.big,icons.big,icons.big]; }
+                else if (r < 0.5) { reward = baseValue * 2; msg = 'Nice!'; finalIcons=[icons.nice,icons.nice,icons.nice]; }
+                else { reward = baseValue * 0.5; msg = 'Small Win'; finalIcons=[icons.small,icons.small,icons.small]; }
+
+                setSlotState({ spinning: false, reels: finalIcons, msg });
+                
+                if (isShadow) {
+                    shadowMoneyRef.current += reward;
+                    setShadowMoney(shadowMoneyRef.current);
+                } else {
+                    moneyRef.current += reward;
+                    setMoney(moneyRef.current);
+                }
+                pendingSaveRef.current = true;
+            };
+
+            const getRemainingDayWarpTime = () => {
+                const diff = 86400000 - (Date.now() - shopUsage.lastDayWarp);
+                if (diff <= 0) return null;
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                return `${h}h ${m}m`;
+            };
+
+            // RENDER BIZ GENÉRICO
+            const renderBusiness = (biz, realm) => {
+                const ref = realm === 'terra' ? businesses : shadowBusinesses;
+                const currency = realm === 'terra' ? money : shadowMoney;
+                const state = ref[biz.id] || { qty: 0, hasManager: false, startTime: null };
+                const exponent = realm === 'terra' ? 1.18 : 1.25;
+                const currentCost = Math.floor(biz.cost * Math.pow(exponent, state.qty));
+                const managerCost = biz.cost * 10;
+                const canBuy = currency >= currentCost;
+                
+                let mult = 1;
+                Object.keys(upgrades).forEach(uId => {
+                    const u = UPGRADES_DATA.find(x=>x.id===uId) || SHADOW_UPGRADES_DATA.find(x=>x.id===uId);
+                    if(u && (u.target === biz.id || u.target === 'all')) mult *= u.mult;
+                });
+                const currentRevenue = biz.rev * (state.qty || 1) * mult;
+
+                return (
+                    <div key={biz.id} className={`glass-panel p-4 rounded-2xl mb-4 relative overflow-hidden group ${realm === 'sombras' ? 'border-purple-500/20 bg-purple-950/20' : ''}`}>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <button onClick={() => manualClick(biz.id, realm)} disabled={state.qty === 0 || state.hasManager || !!state.startTime} className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border-2 transition-all active:scale-95 shadow-lg ${state.qty === 0 ? 'bg-slate-800 border-slate-700 opacity-50 grayscale' : state.hasManager ? 'bg-gradient-to-br from-yellow-900/40 to-slate-900 border-yellow-500/30' : 'bg-slate-800 border-purple-500/50 hover:border-purple-400 cursor-pointer'}`}>
+                                {state.hasManager ? <Crown size={24} className="text-yellow-500 animate-pulse"/> : biz.icon}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-end mb-1">
+                                    <h3 className="font-bold text-white text-lg leading-none">{biz.name}</h3>
+                                    <span className="text-xs bg-slate-950/50 px-2 py-1 rounded-lg border border-white/10 font-mono text-purple-200">Lvl {state.qty}</span>
+                                </div>
+                                <p className="text-xs text-slate-400 mb-2 font-mono flex items-center gap-1">
+                                    {realm === 'terra' ? <span className="text-green-400">+{formatMoney(currentRevenue)}</span> : <span className="text-purple-400">+{formatShadowMoney(currentRevenue)}</span>}
+                                    / {biz.time/1000}s
+                                </p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => buyBusiness(biz.id, realm)} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-b-4 active:border-b-0 active:translate-y-1 ${canBuy ? 'bg-purple-600 border-purple-800 hover:bg-purple-500 text-white' : 'bg-slate-700 border-slate-800 text-slate-500 opacity-70'}`}>
+                                        Comprar <span className="opacity-80 block font-mono text-[10px]">{realm === 'terra' ? formatMoney(currentCost) : formatShadowMoney(currentCost)}</span>
+                                    </button>
+                                    {!state.hasManager && (
+                                        <button onClick={() => hireManager(biz.id, realm)} disabled={currency < managerCost || state.qty === 0} className={`px-3 rounded-lg border text-xs font-bold transition-all ${state.qty > 0 && currency >= managerCost ? 'bg-yellow-600/20 border-yellow-600 text-yellow-500 hover:bg-yellow-600 hover:text-white' : 'border-slate-700 text-slate-700 bg-transparent'}`}>
+                                            <Briefcase size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <ProgressBar startTime={state.startTime} duration={biz.time} isRunning={!!state.startTime} colorClass={realm === 'sombras' ? 'from-purple-900 to-indigo-600' : 'from-purple-500 to-pink-500'}/>
+                    </div>
+                );
+            };
+
+            const currentTheme = activeRealm === 'terra' ? 'bg-slate-950' : 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#0f0518] to-black';
+
+            return (
+                <div className={`max-w-md mx-auto h-screen flex flex-col relative shadow-2xl overflow-hidden transition-colors duration-1000 ${currentTheme}`}>
+                    <LeaderboardModal isOpen={showRanking} onClose={() => setShowRanking(false)} />
+                    <ProfileModal 
+                        isOpen={showProfile} 
+                        onClose={() => setShowProfile(false)} 
+                        user={user} 
+                        money={money} 
+                        shadowMoney={shadowMoney} 
+                        mana={mana} 
+                        stats={statsRef.current} 
+                        achievements={achievements} 
+                        upgrades={upgrades}
+                    />
+
+                    {/* HUD */}
+                    <header className="glass-panel z-50 p-4 pb-2 border-b border-white/5 flex flex-col gap-2 shrink-0">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setShowProfile(true)} className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-lg transition-transform active:scale-95 ${activeRealm === 'terra' ? 'bg-gradient-to-tr from-purple-600 to-pink-600' : 'bg-gradient-to-tr from-slate-700 to-black border border-purple-500/30'}`}>
+                                    {activeRealm === 'terra' ? user.email[0].toUpperCase() : <Ghost size={20}/>}
+                                </button>
+                                <div>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{activeRealm === 'terra' ? 'Patrimônio' : 'Almas'}</p>
+                                    <h2 className={`text-2xl font-black leading-none drop-shadow-md tracking-tight ${activeRealm === 'terra' ? 'text-white' : 'text-purple-300'}`}>
+                                        {activeRealm === 'terra' ? formatMoney(money) : formatShadowMoney(shadowMoney)}
+                                    </h2>
+                                    {/* BOTÃO DE REINO INTEGRADO */}
+                                    {unlockedShadow && (
+                                        <button 
+                                            onClick={() => setActiveRealm(prev => prev === 'terra' ? 'sombras' : 'terra')}
+                                            className="text-[10px] font-bold uppercase tracking-widest text-blue-400 hover:text-white transition mt-1 flex items-center gap-1"
+                                        >
+                                            <Globe size={10} /> Viajar para {activeRealm === 'terra' ? 'Sombras' : 'Terra'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setShowRanking(true)} className="bg-yellow-500/20 border border-yellow-500/50 p-2 rounded-full text-yellow-400 hover:bg-yellow-500 hover:text-white transition animate-pulse-glow">
+                                    <Trophy size={16}/>
+                                </button>
+                                <div className="bg-slate-900/80 px-3 py-1 rounded-full border border-teal-500/30 flex items-center gap-2">
+                                    <Hexagon size={14} className="text-teal-400 fill-teal-400" />
+                                    <span className="font-bold font-mono text-sm">{mana}</span>
+                                </div>
+                                <div className="bg-slate-900/80 px-3 py-1 rounded-full border border-blue-500/30 flex items-center gap-2">
+                                    <Zap size={14} className="text-blue-400 fill-blue-400" />
+                                    <span className="font-bold font-mono text-sm">{spins}</span>
+                                </div>
+                                {isSaving && <Save size={16} className="text-green-500 animate-pulse mt-2" />}
+                                <button onClick={() => signOut(auth)} className="bg-slate-900 p-2 rounded-full text-slate-400 hover:text-red-400 transition"><LogOut size={16} /></button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT */}
+                    <main className="flex-1 overflow-y-auto no-scrollbar p-4 pb-32 space-y-4">
+                        
+                        {/* AREA DE NEGÓCIOS (MUDA COM O REINO) */}
+                        {activeTab === 'tycoon' && (
+                            <div className="space-y-4">
+                                {activeRealm === 'terra' ? (
+                                    <>
+                                        {BUSINESSES_DATA.map(b => renderBusiness(b, 'terra'))}
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-center mb-4">
+                                            <h3 className="text-purple-400 font-bold uppercase tracking-widest text-xs">Dimensão das Sombras</h3>
+                                            <p className="text-[10px] text-slate-500">O ouro não tem valor aqui.</p>
+                                        </div>
+                                        {SHADOW_BUSINESSES_DATA.map(b => renderBusiness(b, 'sombras'))}
+                                    </>
+                                )}
+                                <div className="h-20"></div>
+                            </div>
+                        )}
+
+                        {activeTab === 'slots' && (
+                            <div className="animate-float">
+                                <div className={`glass-panel rounded-3xl p-6 border-2 relative overflow-hidden group ${activeRealm === 'sombras' ? 'border-purple-500/40 bg-purple-900/20' : 'border-yellow-500/20'}`}>
+                                    <div className="flex gap-2 mb-6 bg-slate-950/80 p-4 rounded-2xl border border-white/5 shadow-inner">
+                                        {slotState.reels.map((icon, i) => (
+                                            <div key={i} className="flex-1 h-20 bg-gradient-to-b from-slate-800 to-slate-900 rounded-xl flex items-center justify-center text-4xl shadow-lg border-t border-white/10">{icon}</div>
+                                        ))}
+                                    </div>
+                                    <div className="text-center h-8 mb-2"><span className={`font-black text-lg drop-shadow-md animate-pulse ${activeRealm === 'sombras' ? 'text-purple-400' : 'text-yellow-400'}`}>{slotState.msg}</span></div>
+                                    <button onClick={spinSlot} disabled={spins <= 0 || slotState.spinning} className={`w-full py-4 rounded-xl font-black text-xl tracking-widest transition-all transform active:scale-95 shine-effect ${spins > 0 ? (activeRealm === 'sombras' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/40' : 'bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-lg shadow-red-900/40') : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}>
+                                        {slotState.spinning ? 'GIRANDO...' : `GIRAR (${activeRealm.toUpperCase()})`}
+                                    </button>
+                                </div>
+                                <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">
+                                    {activeRealm === 'sombras' ? 'Gera Essência Sombria baseada em Produção Sombria' : 'Gera Dinheiro baseada em Produção'}
+                                </p>
+                            </div>
+                        )}
+
+                        {activeTab === 'upgrades' && (
+                            <div className="space-y-3">
+                                <div className="p-4 bg-purple-900/20 rounded-xl border border-purple-500/20 mb-4">
+                                    <h3 className="font-bold text-purple-300 flex items-center gap-2"><BookOpen size={18}/> Grimório de Poder</h3>
+                                    <p className="text-xs text-slate-400 mt-1">{activeRealm === 'terra' ? 'Feitiços da Terra.' : 'Maldições Sombrias.'}</p>
+                                </div>
+                                {(activeRealm === 'terra' ? UPGRADES_DATA : SHADOW_UPGRADES_DATA).map(upg => {
+                                    const bought = upgrades[upg.id];
+                                    let currencyVal = 0;
+                                    if(upg.type === 'mana') currencyVal = mana;
+                                    else if(upg.type === 'shadow') currencyVal = shadowMoney;
+                                    else currencyVal = money;
+
+                                    const canBuy = currencyVal >= upg.cost;
+                                    
+                                    return (
+                                        <div key={upg.id} className={`glass-panel p-4 rounded-xl flex items-center justify-between ${bought ? 'opacity-50 grayscale' : ''} ${upg.type === 'shadow' ? 'border-purple-500/30 bg-purple-900/10' : ''}`}>
+                                            <div className="flex-1 pr-2">
+                                                <h4 className={`font-bold text-sm ${upg.type === 'shadow' ? 'text-purple-300' : 'text-white'}`}>{upg.name}</h4>
+                                                <p className="text-[10px] text-slate-400">{upg.desc}</p>
+                                                <p className="text-[10px] font-mono text-yellow-500 mt-1">Mult: x{upg.mult}</p>
+                                            </div>
+                                            {bought ? <span className="text-green-400 font-bold text-xs bg-green-900/30 px-3 py-1 rounded-full">OK</span> : 
+                                                <button onClick={() => buyUpgrade(upg.id)} className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${canBuy ? (upg.type === 'shadow' ? 'bg-purple-600 text-white' : (upg.type === 'mana' ? 'bg-teal-600 text-white' : 'bg-yellow-600 text-white')) : 'bg-slate-800 text-slate-500'}`}>
+                                                    {upg.type === 'shadow' ? formatShadowMoney(upg.cost) : (upg.type === 'mana' ? `M ${upg.cost}` : formatMoney(upg.cost))}
+                                                </button>
+                                            }
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+
+                        {activeTab === 'achievements' && (
+                            <div className="space-y-3">
+                                <div className="p-4 bg-teal-900/20 rounded-xl border border-teal-500/20 mb-4">
+                                    <h3 className="font-bold text-teal-300 flex items-center gap-2"><Trophy size={18}/> Sala de Troféus</h3>
+                                    <p className="text-xs text-slate-400 mt-1">Complete feitos para ganhar Mana Cósmica.</p>
+                                </div>
+                                {ACHIEVEMENTS_DATA.map(ac => {
+                                    const unlocked = achievements[ac.id];
+                                    return (
+                                        <div key={ac.id} className={`glass-panel p-4 rounded-xl flex items-center gap-3 ${unlocked ? 'border-teal-500/50 bg-teal-900/20' : 'opacity-70'}`}>
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${unlocked ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/50' : 'bg-slate-800 text-slate-600'}`}>
+                                                {unlocked ? <Trophy size={18}/> : <Lock size={18}/>}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className={`font-bold text-sm ${unlocked ? 'text-teal-300' : 'text-slate-400'}`}>{ac.name}</h4>
+                                                <p className="text-[10px] text-slate-500">{ac.desc}</p>
+                                            </div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-bold text-teal-400">+{ac.reward}</span>
+                                                <Hexagon size={12} className="text-teal-400 fill-teal-400"/>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {activeTab === 'shop' && (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-emerald-900/20 rounded-xl border border-emerald-500/20 mb-4">
+                                    <h3 className="font-bold text-emerald-300 flex items-center gap-2"><ShoppingBag size={18}/> Mercado Negro</h3>
+                                    <p className="text-xs text-slate-400 mt-1">Troque riquezas por poder bruto.</p>
+                                </div>
+
+                                {/* Seção de Especiais */}
+                                {!unlockedShadow && (
+                                    <>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2 mt-4">Artefatos Dimensionais</h4>
+                                        <div className="grid grid-cols-1 gap-3">
+                                             <button 
+                                                onClick={unlockShadowRealm}
+                                                disabled={money < 1000000000000}
+                                                className={`glass-panel p-4 rounded-xl flex items-center gap-4 transition active:scale-95 ${money >= 1000000000000 ? 'hover:border-purple-500/50' : 'opacity-50 grayscale'}`}
+                                            >
+                                                <div className="bg-purple-500/20 p-3 rounded-full"><Ghost size={24} className="text-purple-400"/></div>
+                                                <div className="text-left flex-1">
+                                                    <div className="font-bold text-sm text-white">Portal das Sombras</div>
+                                                    <div className="text-xs text-purple-300">Desbloqueia a Dimensão das Sombras</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-sm text-white">{formatMoney(1000000000000)}</div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2 mt-4">Elixires de Energia</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { qty: 10, cost: 5000, name: 'Frasco Pequeno' },
+                                        { qty: 50, cost: 50000, name: 'Frasco Médio' },
+                                        { qty: 100, cost: 200000, name: 'Galão Mágico' },
+                                        { qty: 500, cost: 1000000, name: 'Barril de Energia' }
+                                    ].map((item, i) => (
+                                        <button key={i} onClick={() => buyEnergy(item.qty, item.cost)} disabled={money < item.cost} className={`glass-panel p-4 rounded-xl flex flex-col items-center gap-2 transition active:scale-95 ${money >= item.cost ? 'hover:border-green-500/50' : 'opacity-50'}`}>
+                                            <div className="bg-blue-500/20 p-2 rounded-full"><Zap size={20} className="text-blue-400"/></div>
+                                            <div className="text-center">
+                                                <div className="font-bold text-sm">+{item.qty} Giros</div>
+                                                <div className="text-xs text-slate-400">{formatMoney(item.cost)}</div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2 mt-4">Dobra Temporal (Reino Ativo)</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button 
+                                        onClick={() => buyTimeWarp(1, 10000)} 
+                                        disabled={money < 10000 || shopUsage.hourWarpCount >= 5} 
+                                        className={`glass-panel p-4 rounded-xl flex flex-col items-center gap-2 transition active:scale-95 ${money >= 10000 && shopUsage.hourWarpCount < 5 ? 'hover:border-orange-500/50' : 'opacity-50 grayscale'}`}
+                                    >
+                                        <div className="bg-orange-500/20 p-2 rounded-full relative">
+                                            <Clock size={20} className="text-orange-400"/>
+                                            {shopUsage.hourWarpCount >= 5 && <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Lock size={10} className="text-white"/></div>}
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-sm">Pular 1 Hora</div>
+                                            <div className="text-xs text-slate-400">$10k</div>
+                                            <div className="text-[10px] text-orange-400 mt-1 font-mono">Restam: {5 - shopUsage.hourWarpCount}</div>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => buyTimeWarp(24, 250000)} 
+                                        disabled={money < 250000 || getRemainingDayWarpTime() !== null} 
+                                        className={`glass-panel p-4 rounded-xl flex flex-col items-center gap-2 transition active:scale-95 ${money >= 250000 && getRemainingDayWarpTime() === null ? 'hover:border-red-500/50' : 'opacity-50 grayscale'}`}
+                                    >
+                                        <div className="bg-red-500/20 p-2 rounded-full relative">
+                                            <Clock size={20} className="text-red-400"/>
+                                            {getRemainingDayWarpTime() !== null && <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Lock size={10} className="text-white"/></div>}
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-sm">Pular 1 Dia</div>
+                                            <div className="text-xs text-slate-400">$250k</div>
+                                            {getRemainingDayWarpTime() && <div className="text-[10px] text-red-400 mt-1 font-mono">{getRemainingDayWarpTime()}</div>}
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* NAV BAR */}
+                    <nav className="glass-panel absolute bottom-0 w-full pb-6 pt-4 px-6 flex justify-between items-center z-50 border-t border-white/10 bg-slate-900/95">
+                        <button onClick={() => setActiveTab('tycoon')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'tycoon' ? 'text-purple-400 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <Briefcase size={20} className={activeTab === 'tycoon' ? 'fill-purple-500/20' : ''} />
+                            <span className="text-[9px] font-bold uppercase">Negócios</span>
+                        </button>
+                        <button onClick={() => setActiveTab('slots')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'slots' ? 'text-pink-400 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <Zap size={20} className={activeTab === 'slots' ? 'fill-pink-500/20' : ''} />
+                            <span className="text-[9px] font-bold uppercase">Roleta</span>
+                        </button>
+                        <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'upgrades' ? 'text-blue-400 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <BookOpen size={20} className={activeTab === 'upgrades' ? 'fill-blue-500/20' : ''} />
+                            <span className="text-[9px] font-bold uppercase">Grimório</span>
+                        </button>
+                        <button onClick={() => setActiveTab('achievements')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'achievements' ? 'text-teal-400 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <Trophy size={20} className={activeTab === 'achievements' ? 'fill-teal-500/20' : ''} />
+                            <span className="text-[9px] font-bold uppercase">Troféus</span>
+                        </button>
+                        <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'shop' ? 'text-emerald-400 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <ShoppingBag size={20} className={activeTab === 'shop' ? 'fill-emerald-500/20' : ''} />
+                            <span className="text-[9px] font-bold uppercase">Loja</span>
+                        </button>
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            useEffect(() => { const unsub = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); }); return () => unsub(); }, []);
+            if (loading) return <div className="h-screen bg-slate-950 flex items-center justify-center"><div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>;
+            return user ? <GameApp user={user} /> : <AuthScreen />;
+        }
+    </script>
+</body>
+</html>
