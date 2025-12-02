@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Witch Capitalist 7.4 - Mercador Ágil</title>
+    <title>Witch Capitalist 7.5 - Matemática Pura</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -79,7 +79,7 @@
             Zap, Coins, Ghost, Sparkles, User, Briefcase, LogOut, 
             ArrowUpCircle, Star, Crown, Flame, Gem, BookOpen, 
             Settings, Scroll, Palette, Anchor, ShoppingBag, Clock, Shield, Save, 
-            Trophy, Hexagon, Lock, X, Medal, Globe, Moon, Skull, Eye, Map, CheckCircle, Layers
+            Trophy, Hexagon, Lock, X, Medal, Globe, Moon, Skull, Eye, Map, CheckCircle, Layers, TrendingUp
         } from 'https://esm.sh/lucide-react@0.294.0';
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -721,6 +721,7 @@
                 }
             };
 
+            // MODIFICADO: Agora compra o upgrade certo dependendo do ID e Tipo
             const buyUpgrade = (uId) => {
                 // Procura em ambas as listas
                 const upg = UPGRADES_DATA.find(u => u.id === uId) || SHADOW_UPGRADES_DATA.find(u => u.id === uId);
@@ -858,7 +859,21 @@
                 let mult = 1;
                 Object.keys(upgrades).forEach(uId => {
                     const u = UPGRADES_DATA.find(x=>x.id===uId) || SHADOW_UPGRADES_DATA.find(x=>x.id===uId);
-                    if(u && (u.target === biz.id || u.target === 'all')) mult *= u.mult;
+                    if (u) {
+                        // VERIFICAÇÃO DE COMPATIBILIDADE DE REINO
+                        const isTerraBiz = realm === 'terra';
+                        const isShadowBiz = realm === 'sombras';
+                        
+                        const isTerraUpg = u.type === 'money' || u.type === 'mana';
+                        const isShadowUpg = u.type === 'shadow';
+
+                        // Aplica se os tipos baterem
+                        if ((isTerraBiz && isTerraUpg) || (isShadowBiz && isShadowUpg)) {
+                             if (u.target === biz.id || u.target === 'all') {
+                                 mult *= u.mult;
+                             }
+                        }
+                    }
                 });
                 const currentRevenue = biz.rev * (state.qty || 1) * mult;
 
@@ -876,6 +891,7 @@
                                 <p className="text-xs text-slate-400 mb-2 font-mono flex items-center gap-1">
                                     {realm === 'terra' ? <span className="text-green-400">+{formatMoney(currentRevenue)}</span> : <span className="text-purple-400">+{formatShadowMoney(currentRevenue)}</span>}
                                     / {biz.time/1000}s
+                                    {mult > 1 && <span className="text-[10px] bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">x{mult}</span>}
                                 </p>
                                 <div className="flex gap-2">
                                     <button onClick={() => buyBusiness(biz.id, realm)} disabled={!canBuy} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-b-4 active:border-b-0 active:translate-y-1 ${canBuy ? 'bg-purple-600 border-purple-800 hover:bg-purple-500 text-white' : 'bg-slate-700 border-slate-800 text-slate-500 opacity-70 cursor-not-allowed'}`}>
