@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Witch Capitalist 7.5 - Matemática Pura</title>
+    <title>Witch Capitalist 7.6 - Matemática Infalível</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -227,7 +227,7 @@
                     <div className="w-full max-w-md glass-panel p-8 rounded-3xl shadow-2xl relative overflow-hidden">
                         <div className="text-center mb-10 relative z-10">
                             <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200">Witch Capitalist</h1>
-                            <p className="text-purple-300 text-sm mt-2">Dualidade Mística</p>
+                            <p className="text-purple-300 text-sm mt-2">Matemática Pura</p>
                         </div>
                         <form onSubmit={handleAuth} className="space-y-4 relative z-10">
                             <input className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-white placeholder-slate-400" placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
@@ -319,7 +319,6 @@
             );
         };
 
-        // --- NEW PROFILE MODAL ---
         const ProfileModal = ({ isOpen, onClose, user, stats, money, shadowMoney, mana, spins, achievements, upgrades }) => {
             if (!isOpen) return null;
 
@@ -375,7 +374,7 @@
             const [activeTab, setActiveTab] = useState('tycoon'); 
             const [activeRealm, setActiveRealm] = useState('terra'); 
             const [unlockedShadow, setUnlockedShadow] = useState(false);
-            const [buyMult, setBuyMult] = useState(1); // 1, 10, 100, 'MAX'
+            const [buyMult, setBuyMult] = useState(1); 
 
             const [businesses, setBusinesses] = useState({}); 
             const [shadowBusinesses, setShadowBusinesses] = useState({}); 
@@ -477,7 +476,7 @@
                 } catch (e) { console.error("Erro save", e); } finally { setTimeout(() => setIsSaving(false), 500); }
             };
 
-            // GAME LOOP (DUPLO REINO)
+            // --- GAME LOOP ---
             useEffect(() => {
                 const tickRate = 100;
                 const loop = setInterval(() => {
@@ -491,27 +490,17 @@
                     let newBizState = { ...businessesRef.current };
                     let newShadowBizState = { ...shadowBusinessesRef.current };
 
-                    let globalMult = 1;
-                    let globalShadowMult = 1;
-
-                    // Calcula Multiplicadores Globais
-                    Object.keys(upgradesRef.current).forEach(uId => {
-                         const uData = UPGRADES_DATA.find(u => u.id === uId) || SHADOW_UPGRADES_DATA.find(u => u.id === uId);
-                         if (uData && uData.target === 'all') {
-                             if(uData.type === 'shadow') globalShadowMult *= uData.mult;
-                             else globalMult *= uData.mult;
-                         }
-                    });
-
                     // 1. REINO DA TERRA
                     BUSINESSES_DATA.forEach(biz => {
                         const state = newBizState[biz.id];
                         if (!state || state.qty === 0) return;
 
-                        let mult = globalMult;
-                        Object.keys(upgradesRef.current).forEach(uId => {
-                            const uData = UPGRADES_DATA.find(u => u.id === uId);
-                            if (uData && uData.target === biz.id) mult *= uData.mult;
+                        // CÁLCULO DE MULTIPLICADOR (SIMPLE & ROBUST)
+                        let mult = 1;
+                        UPGRADES_DATA.forEach(u => {
+                            if (upgradesRef.current[u.id]) {
+                                if (u.target === 'all' || u.target === biz.id) mult *= u.mult;
+                            }
                         });
 
                         const revPerSec = (biz.rev * state.qty * mult) / (biz.time/1000);
@@ -534,10 +523,11 @@
                         const state = newShadowBizState[biz.id];
                         if (!state || state.qty === 0) return;
                         
-                        let mult = globalShadowMult;
-                        Object.keys(upgradesRef.current).forEach(uId => {
-                            const uData = SHADOW_UPGRADES_DATA.find(u => u.id === uId);
-                            if (uData && uData.target === biz.id) mult *= uData.mult;
+                        let mult = 1;
+                        SHADOW_UPGRADES_DATA.forEach(u => {
+                            if (upgradesRef.current[u.id]) {
+                                if (u.target === 'all' || u.target === biz.id) mult *= u.mult;
+                            }
                         });
 
                         const revPerSec = (biz.rev * state.qty * mult) / (biz.time/1000);
@@ -619,19 +609,12 @@
             // HELPER: Bulk Cost Calculation (Soma Geométrica)
             const getBulkBuyInfo = (baseCost, currentQty, exponent, multiplier, currentMoney) => {
                 if (multiplier === 'MAX') {
-                    // Logaritmo para encontrar max N
-                    // CustoPóximo = Base * r^k
-                    // N = floor( log( M * (r-1) / (Base * r^k) + 1 ) / log(r) )
                     const priceNext = baseCost * Math.pow(exponent, currentQty);
                     if (priceNext > currentMoney) return { qty: 0, cost: 0 };
-                    
                     const maxN = Math.floor( Math.log( (currentMoney * (exponent - 1)) / priceNext + 1 ) / Math.log(exponent) );
-                    const actualN = Math.max(1, maxN); // Pelo menos 1 se tiver dinheiro pra 1, mas a lógica acima já filtrou 0
-                    
-                    // Recalcula custo exato para N
+                    const actualN = Math.max(1, maxN); 
                     const totalCost = priceNext * ( (Math.pow(exponent, actualN) - 1) / (exponent - 1) );
-                    
-                    if (totalCost > currentMoney) return { qty: 0, cost: 0 }; // Edge case de precisão float
+                    if (totalCost > currentMoney) return { qty: 0, cost: 0 }; 
                     return { qty: actualN, cost: Math.floor(totalCost) };
                 } else {
                     const qty = multiplier;
@@ -706,7 +689,6 @@
                 }
             };
 
-            // FIX: Force immediate update and use Ref to prevent autosave overwriting
             const unlockShadowRealm = () => {
                 if (moneyRef.current >= 1000000000000) { 
                     moneyRef.current -= 1000000000000;
@@ -715,20 +697,16 @@
                     unlockedShadowRef.current = true;
                     setUnlockedShadow(true);
                     
-                    // Force Save Immediately
                     updateDoc(dbRef, { unlockedShadow: true, money: moneyRef.current });
                     setActiveRealm('sombras');
                 }
             };
 
-            // MODIFICADO: Agora compra o upgrade certo dependendo do ID e Tipo
             const buyUpgrade = (uId) => {
-                // Procura em ambas as listas
                 const upg = UPGRADES_DATA.find(u => u.id === uId) || SHADOW_UPGRADES_DATA.find(u => u.id === uId);
                 if(!upg) return;
 
                 const price = upg.cost;
-                // Decide a moeda baseada no tipo do upgrade
                 let currencyRef;
                 let setCurrency;
 
@@ -770,7 +748,6 @@
                     moneyRef.current -= cost;
                     setMoney(moneyRef.current);
 
-                    // Aplica o Warp no REINO ATIVO
                     if (activeRealm === 'terra') {
                         const windfall = mpsRef.current * 3600 * hours;
                         moneyRef.current += windfall;
@@ -809,7 +786,6 @@
                 const r = Math.random();
                 let reward = 0; let msg = ''; let finalIcons = [];
                 
-                // Roleta Sombria usa MPS Sombrio, Roleta Normal usa MPS Normal
                 const isShadow = activeRealm === 'sombras';
                 const mps = isShadow ? shadowMpsRef.current : mpsRef.current;
                 const baseValue = Math.max(100, mps * 60); 
@@ -850,31 +826,22 @@
                 const state = ref[biz.id] || { qty: 0, hasManager: false, startTime: null };
                 const exponent = realm === 'terra' ? 1.18 : 1.25;
                 
-                // BULK BUY CALCULATION
                 const { qty: buyQty, cost: buyCost } = getBulkBuyInfo(biz.cost, state.qty, exponent, buyMult, currency);
                 
                 const managerCost = biz.cost * 10;
                 const canBuy = buyQty > 0;
                 
+                // MULTIPLIER CALCULATION - VISUAL
                 let mult = 1;
-                Object.keys(upgrades).forEach(uId => {
-                    const u = UPGRADES_DATA.find(x=>x.id===uId) || SHADOW_UPGRADES_DATA.find(x=>x.id===uId);
-                    if (u) {
-                        // VERIFICAÇÃO DE COMPATIBILIDADE DE REINO
-                        const isTerraBiz = realm === 'terra';
-                        const isShadowBiz = realm === 'sombras';
-                        
-                        const isTerraUpg = u.type === 'money' || u.type === 'mana';
-                        const isShadowUpg = u.type === 'shadow';
-
-                        // Aplica se os tipos baterem
-                        if ((isTerraBiz && isTerraUpg) || (isShadowBiz && isShadowUpg)) {
-                             if (u.target === biz.id || u.target === 'all') {
-                                 mult *= u.mult;
-                             }
+                const relevantUpgrades = realm === 'terra' ? UPGRADES_DATA : SHADOW_UPGRADES_DATA;
+                relevantUpgrades.forEach(u => {
+                    if (upgrades[u.id]) { // Check if bought
+                        if (u.target === 'all' || u.target === biz.id) {
+                            mult *= u.mult;
                         }
                     }
                 });
+
                 const currentRevenue = biz.rev * (state.qty || 1) * mult;
 
                 return (
@@ -891,7 +858,7 @@
                                 <p className="text-xs text-slate-400 mb-2 font-mono flex items-center gap-1">
                                     {realm === 'terra' ? <span className="text-green-400">+{formatMoney(currentRevenue)}</span> : <span className="text-purple-400">+{formatShadowMoney(currentRevenue)}</span>}
                                     / {biz.time/1000}s
-                                    {mult > 1 && <span className="text-[10px] bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">x{mult}</span>}
+                                    {mult > 1 && <span className="text-[10px] bg-blue-900/80 text-blue-300 px-2 py-0.5 rounded-full ml-2 border border-blue-500/50 font-bold shadow-sm shadow-blue-500/20">x{mult}</span>}
                                 </p>
                                 <div className="flex gap-2">
                                     <button onClick={() => buyBusiness(biz.id, realm)} disabled={!canBuy} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-b-4 active:border-b-0 active:translate-y-1 ${canBuy ? 'bg-purple-600 border-purple-800 hover:bg-purple-500 text-white' : 'bg-slate-700 border-slate-800 text-slate-500 opacity-70 cursor-not-allowed'}`}>
